@@ -1,21 +1,39 @@
 import json
-from . import mqtt_client
+from .mqtt import mqtt_client
 
 topic = "notification"
 
 def publishGetNots():
     payload = {"method": "GET"}
-    mqtt_client.publish(topic, payload)
+    try:
+        mqtt_client.publish(topic, payload)
+        return json({'Request send successfully': str(e)}), 200
+    except Exception as e:
+        return json({'error': str(e)}), 500
+    
 
 def publishGetNot(payload):
     payload["method"] = "GETOne"
-    mqtt_client.publish(topic, json.dumps(payload))
+    try:
+        mqtt_client.publish(topic, json.dumps(payload))
+        return json({'Request send successfully': str(e)}), 200
+    except Exception as e:
+        return json({'error': str(e)}), 500
+
 
 def publishPostNot(payload):
     payload["method"] = "POST"
-    mqtt_client.publish(topic, json.dumps(payload))
+    try:
+        mqtt_client.publish(topic, json.dumps(payload))
+        return json({'Request send successfully': str(e)}), 201
+    except Exception as e:
+        return json({'error': str(e)}), 500
 
 
 def publishDeleteNot(payload):
     payload["method"] = "DELETE"
-    mqtt_client.publish(topic, json.dumps(payload))
+    try:
+        mqtt_client.publish(topic, json.dumps(payload))
+        return json({'Request send successfully': str(e)}), 200
+    except Exception as e:
+        return json({'error': str(e)}), 500
