@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, request
 from apifairy import body, response, other_responses
 from .schema import NotificationSchema
 from .broker_routes import publishGetNots, publishGetNot, publishPostNot, publishDeleteNot
@@ -26,9 +26,10 @@ def get_notifications():
 @other_responses({501: 'Notification could not be sent'})
 @response(notification_schema, 201)
 @body(notification_schema, 201)
-def post_notification(notification_id):
+def post_notification():
     """Create a notification"""
-    publishPostNot(notification_id)
+    payload = request.get_json()
+    publishPostNot(payload)
 
 
 @bp.route('/<int:notification_id>', methods=['DELETE'])
