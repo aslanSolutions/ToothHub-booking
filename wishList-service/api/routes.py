@@ -1,53 +1,51 @@
+from venv import logger
 from flask import Blueprint, jsonify, request
 from apifairy import body, response
 from .schema import WishlistSchema
 from.db import users
-import requests
 from bson import ObjectId 
+import requests
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 
 bp = Blueprint('Wishlist', __name__, url_prefix='/wishlist')
-
 wishlist_collection = users['Wishlist']
 
-WishlistSchema = Schema()
-
-AUTH_SERVICE_URL = "http://localhost:5005"
-
-@bp.route('/register', methods=['POST'])
+@bp.route('/create', methods=['POST'])
+@jwt_required()
 def register_wishlist():
     # Create wishlist
     payload = request.get_json()
+    logger.debug(f"Received payload: {payload}")
 
-    # Validate the payload against the schema
-    errors = WishlistSchema.validate(payload)
+    # Instantiate the schema and validate the payload
+    schema = WishlistSchema()
+    errors = schema.validate(payload)
     if errors:
         return jsonify({"message": "Validation error", "errors": errors}), 400
 
-    # Make a registration request to the authentication service
-    wishlist_service_url = "http://127.0.0.1:5005/wishlist/register"  # Update with the correct URL
-    wishlist_payload = {
-        "patient_id": payload["patient_id"],  # Use relevant wishlist information
-        "date": payload["date"]
-    }
+    # Extract the JWT identity from the request
+    current_user_identity = get_jwt_identity()
 
-    wishlist_response = requests.post(wishlist_service_url, json=wishlist_payload)
+    # Make a validation request to the authentication service
+    validate_url = "http://127.0.0.1:5000/auth/validate"
+    headers = {"Authorization": request.headers.get('Authorization')}
+    validate_response = requests.get(validate_url, headers=headers)
 
-    if wishlist_response.status_code == 201:
-        # If registration is successful in the authentication service,
-        # proceed with the wishlist registration in your service.
-        result = users.insert_one(payload)
-        new_patient_id = result.inserted_id
-        created_patient = users.find_one({'_id': new_patient_id})
+    if validate_response.status_code == 200:
+        # User is valid, proceed with wishlist creation
+        result = wishlist_collection.insert_one(payload)
+        new_wishlist_id = result.inserted_id
+        created_wishlist = wishlist_collection.find_one({'_id': new_wishlist_id})
 
         # Convert ObjectId to string before returning the response
-        created_patient['_id'] = str(created_patient['_id'])
-
-        return jsonify(created_patient), 201
+        created_wishlist['_id'] = str(created_wishlist['_id'])
+        return jsonify(created_wishlist), 201
     else:
-        # Handle registration failure in the authentication service
-        print(f"Authentication service response: {wishlist_response.text}")
-        return jsonify({"message": "wishlist registration failed"}), 500
+        # Validation failed
+        return jsonify({"message": "User validation failed"}), validate_response.status_code
+
+
 
 @bp.route('/<int:wishlist_id>', methods=['GET'])
 @response(WishlistSchema, 200)

@@ -1,17 +1,17 @@
 import os
 from pymongo import MongoClient
-from flask_dotenv import DotEnv
+from dotenv import load_dotenv
 
-DotEnv()
+# Load environment variables from .env file
+load_dotenv()
 
-MONGODB_URI = "mongodb+srv://ali:ali@aslan.im1wsjq.mongodb.net/"
-
+# Retrieve MongoDB URI from environment variable
+mongodb_uri = os.getenv('MONGODB_URI')  # Use the variable 'mongodb_uri' here
 
 try:
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(mongodb_uri)  # Use the 'mongodb_uri' variable
     db = client.Wishlist
     users = db.users
     print("Connected to the database.")
 except Exception as e:
     print(f"Error connecting to the database: {e}")
-
