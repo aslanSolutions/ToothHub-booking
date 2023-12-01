@@ -9,7 +9,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 
 bp = Blueprint('Wishlist', __name__, url_prefix='/wishlist')
-wishlist_collection = users['Wishlist']
+wishlist_collection = users
 
 @bp.route('/create', methods=['POST'])
 @jwt_required()
@@ -49,62 +49,27 @@ def register_wishlist():
 
 @bp.route('/<int:wishlist_id>', methods=['GET'])
 @response(WishlistSchema, 200)
-def get_wishliat(wishlist_id):
-    # Retrieve a dentist by ID
+def get_wishlist(wishlist_id):
     wishlist = users.find_one({'_id': wishlist_id})
-
     if wishlist:
         return wishlist
     else:
         return jsonify({"message": f"No wishlist found with ID {wishlist_id}"}), 404
 
 
-@bp.route('/', methods=['GET'])
+@bp.route('/<int:patient_id>', methods=['GET'])
 @response(WishlistSchema, 200)
-def get_all_wishlists():
-    # Retrieve all dentsit list
-    all_patinets = list(wishlist_collection.find({}))
-    return all_patinets
+def get_all_wishlists_for_patient(patient_id):
+    all_wishlist_for_patient = list(wishlist_collection.find({'patient_id': patient_id}))
+    return all_wishlist_for_patient
 
 
-@bp.route('/<int:wishlist_id>', methods=['PATCH'])
-@response(WishlistSchema, 200)
-@body(WishlistSchema, 200)
-def update_wishlist(wishlist_id):
-    # Update a wishlist by ID
-    existing_wishlist = users.find_one({'_id': wishlist_id})
-
-    if not existing_wishlist:
-        return jsonify({"message": f"No wishlist found with ID {wishlist_id}"}), 404
-
-    # Get the updated data from the request payload
-    updated_data = request.get_json()
-
-    # Validate the updated data against the schema
-    errors = WishlistSchema.validate(updated_data)
-    if errors:
-        return jsonify({"message": "Validation error", "errors": errors}), 400
-
-    # Update the existing patinet with the new data
-    users.update_one({'_id': wishlist_id}, {'$set': updated_data})
-
-    # Return the updated wishlist
-    updated_wishlist = users.find_one({'_id': wishlist_id})
-    return updated_wishlist
 
 @bp.route('/<int:wishlist_id>', methods=['DELETE'])
 def delete_wishlist(wishlist_id):
-    # Delete a wishlist account by ID
     result = users.delete_one({'_id': wishlist_id})
 
     if result.deleted_count == 1:
         return jsonify({"message": f"wishlist with ID {wishlist_id} deleted successfully"}), 200
     else:
         return jsonify({"message": f"No dentist found with ID {wishlist_id}"}), 404
-
-@bp.route('/delete_all', methods=['DELETE'])
-def delete_all_wishlists():
-    # Delete all patinets from the collection
-    result = wishlist_collection.delete_many({})
-    return jsonify({"message": f"{result.deleted_count} wishlist deleted"}), 200
-
