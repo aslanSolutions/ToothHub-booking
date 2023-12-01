@@ -9,7 +9,7 @@ load_dotenv()
 mongodb_uri = os.getenv('MONGODB_URI')  # Use the variable 'mongodb_uri' here
 
 try:
-    client = MongoClient(mongodb_uri)  # Use the 'mongodb_uri' variable
+    client = MongoClient(mongodb_uri, tlsAllowInvalidCertificates=True)  # Use the 'mongodb_uri' variable
     db = client.Wishlist
     users = db.users
     print("Connected to the database.")
