@@ -9,7 +9,7 @@ mongodb_uri = os.getenv('MONGODB_URI')
 
 try:
     client = MongoClient(mongodb_uri)
-    db = client.availability_times
+    db = client.Appointments
     times = db.times
     print("Connected to the database.")
 except Exception as e:

@@ -10,5 +10,5 @@ def close_db(error):
         g.mongo_db_client.close()
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5004))
+    port = int(os.environ.get("PORT", 5005))
     app.run(port=port)
