@@ -1,7 +1,6 @@
 from marshmallow import Schema, fields
 
 class TimeSlotSchema(Schema):
-    time_slot_id = fields.Str(required=True)
     start_time = fields.DateTime(required=True)
     end_time = fields.DateTime(required=True)
 
