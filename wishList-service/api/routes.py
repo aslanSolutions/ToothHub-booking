@@ -18,6 +18,8 @@ def register_wishlist():
     payload = request.get_json()
     logger.debug(f"Received payload: {payload}")
 
+    auth_header = request.headers.get('Authorization')
+    logger.debug(f"Authorization header received: {auth_header}")
     # Instantiate the schema and validate the payload
     schema = WishlistSchema()
     errors = schema.validate(payload)
@@ -28,7 +30,7 @@ def register_wishlist():
     current_user_identity = get_jwt_identity()
 
     # Make a validation request to the authentication service
-    validate_url = "http://127.0.0.1:5000/auth/validate"
+    validate_url = "http://127.0.0.1:5005/auth/validate"
     headers = {"Authorization": request.headers.get('Authorization')}
     validate_response = requests.get(validate_url, headers=headers)
 

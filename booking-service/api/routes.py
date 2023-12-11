@@ -2,10 +2,11 @@ from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
 from .schema import BookingSchema
 from .db import times
+import requests
 
 bp = Blueprint('appointments', __name__, url_prefix='/appointments')
 
-@bp.route('/appointment', methods=['POST'])
+@bp.route('/', methods=['POST'])
 def create_appointment_endpoint():
     """
     Endpoint to create an appointment.
@@ -13,10 +14,24 @@ def create_appointment_endpoint():
     Returns a success message and status code 201 if successful.
     """
     schema = BookingSchema()
+
+    appointment_data = schema.load(request.json)
     try:
-        appointment_data = schema.load(request.json)
-        times.insert_one(appointment_data)
-        return jsonify({"message": "Appointment created successfully"}), 201
+        validate_url = "http://127.0.0.1:5005/auth/validate"
+        headers = {"Authorization": request.headers.get('Authorization')}
+        validate_response = requests.get(validate_url, headers=headers)
+
+        if validate_response.status_code == 200:
+            result = times.insert_one(appointment_data)
+            new_appointment_id = result.inserted_id
+            created_appointment = times.find_one({'_id': new_appointment_id})
+
+            created_appointment['_id'] = str(created_appointment['_id'])
+            return jsonify(created_appointment), 201
+        else:
+            # Validation failed
+            return jsonify({"message": "User validation failed"}), validate_response.status_code
+        
     except ValidationError as err:
         return jsonify(err.messages), 400
 
@@ -47,7 +62,7 @@ def get_appointment_endpoint(appointment_id):
     else:
         return jsonify({"message": "Appointment not found"}), 404
 
-@bp.route('/appointments', methods=['GET'])
+@bp.route('/all_appointments', methods=['GET'])
 def get_all_appointments_endpoint():
     """
     Endpoint to get all appointments.
