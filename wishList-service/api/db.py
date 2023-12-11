@@ -2,14 +2,12 @@ import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Retrieve MongoDB URI from environment variable
-mongodb_uri = os.getenv('MONGODB_URI')  # Use the variable 'mongodb_uri' here
+mongodb_uri = os.getenv('MONGODB_URI')
 
 try:
-    client = MongoClient(mongodb_uri, tlsAllowInvalidCertificates=True)  # Use the 'mongodb_uri' variable
+    client = MongoClient(mongodb_uri)
     db = client.Wishlist
     users = db.users
     print("Connected to the database.")

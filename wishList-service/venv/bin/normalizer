@@ -1,4 +1,4 @@
-#!/Users/ajal-masri/Desktop/Project/Booking/Booking/wishList-service/venv/bin/python3.12
+#!/home/mali/Desktop/ToothHub/Patient/Booking/wishList-service/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
