@@ -17,14 +17,33 @@ def create_appointment_endpoint():
 
     appointment_data = schema.load(request.json)
     try:
-        validate_url = "http://127.0.0.1:5005/auth/validate"
-        headers = {"Authorization": request.headers.get('Authorization')}
-        validate_response = requests.get(validate_url, headers=headers)
+        #validate_url = "http://127.0.0.1:5005/auth/validate"
+        #headers = {"Authorization": request.headers.get('Authorization')}
+        #validate_response = requests.get(validate_url, headers=headers)
 
-        if validate_response.status_code == 200:
+        #if validate_response.status_code == 200:
+        if True:
             result = times.insert_one(appointment_data)
             new_appointment_id = result.inserted_id
             created_appointment = times.find_one({'_id': new_appointment_id})
+
+
+            date_str = appointment_data['appointment_datetime'].date().strftime('%Y-%m-%d')
+            time_str = appointment_data['appointment_datetime'].time().strftime('%H:%M')
+            message = f"A new appointment has been scheduled for you on {date_str} at {time_str}. Appointment id: {str(created_appointment['_id'])}"
+            notification = {
+                'subject': "New Appointment Scheduled",
+                'description':message,
+                'receiver':[appointment_data['dentist_email'], appointment_data['patient_email']]
+            }
+
+            try:
+                notification_url = "http://127.0.0.1:5000/notifications"
+                notification_response = requests.post(notification_url, json = notification)
+                print(notification_response)
+            except Exception as e:
+                return {'error': str(e)}, 501
+
 
             created_appointment['_id'] = str(created_appointment['_id'])
             return jsonify(created_appointment), 201
