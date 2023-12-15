@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
 from .schema import BookingSchema
 from .db import times
+from .broker_routes import publishMessage
 import requests
 
 bp = Blueprint('appointments', __name__, url_prefix='/appointments')
@@ -37,13 +38,11 @@ def create_appointment_endpoint():
                 'receiver':[appointment_data['dentist_email'], appointment_data['patient_email']]
             }
 
-            try:
-                notification_url = "http://127.0.0.1:5000/notifications"
-                notification_response = requests.post(notification_url, json = notification)
-                print(notification_response)
-            except Exception as e:
-                return {'error': str(e)}, 501
 
+            publish_result = publishMessage("booking", 'created_appointment')
+            print(publish_result)
+            if publish_result is not None:
+                return {'error': publish_result}, 501
 
             created_appointment['_id'] = str(created_appointment['_id'])
             return jsonify(created_appointment), 201
