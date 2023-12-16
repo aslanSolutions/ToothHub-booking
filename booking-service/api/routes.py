@@ -1,9 +1,12 @@
+from datetime import datetime
+import json
 from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
 from .schema import BookingSchema
 from .db import times
-from .broker_routes import publishMessage
+from .broker_routes import publishMessage, wait_for_acknowledgment
 import requests
+import uuid
 
 bp = Blueprint('appointments', __name__, url_prefix='/appointments')
 
@@ -24,28 +27,23 @@ def create_appointment_endpoint():
 
         #if validate_response.status_code == 200:
         if True:
-            result = times.insert_one(appointment_data)
-            new_appointment_id = result.inserted_id
-            created_appointment = times.find_one({'_id': new_appointment_id})
-
-
-            date_str = appointment_data['appointment_datetime'].date().strftime('%Y-%m-%d')
-            time_str = appointment_data['appointment_datetime'].time().strftime('%H:%M')
-            message = f"A new appointment has been scheduled for you on {date_str} at {time_str}. Appointment id: {str(created_appointment['_id'])}"
-            notification = {
-                'subject': "New Appointment Scheduled",
-                'description':message,
-                'receiver':[appointment_data['dentist_email'], appointment_data['patient_email']]
-            }
-
-
-            publish_result = publishMessage("booking", 'created_appointment')
+            correlation_id = str(uuid.uuid4())
+            appointment_data['correlation_id'] = correlation_id
+            message_json = json.dumps(appointment_data, default=lambda x: x.isoformat() if isinstance(x, datetime) else None)
+            publish_result = publishMessage("booking", message_json)
             print(publish_result)
             if publish_result is not None:
                 return {'error': publish_result}, 501
-
-            created_appointment['_id'] = str(created_appointment['_id'])
-            return jsonify(created_appointment), 201
+            
+            confirmation = wait_for_acknowledgment(correlation_id)
+            if confirmation == True:
+                result = times.insert_one(appointment_data)
+                new_appointment_id = result.inserted_id
+                created_appointment = times.find_one({'_id': new_appointment_id})
+                created_appointment['_id'] = str(created_appointment['_id'])
+                return jsonify(created_appointment), 201
+            else:
+                return jsonify({"message": "The chosen date is not available anymore"}), 404
         else:
             # Validation failed
             return jsonify({"message": "User validation failed"}), validate_response.status_code
@@ -107,3 +105,14 @@ def update_appointment_endpoint(appointment_id):
             return jsonify({"message": "Appointment not found"}), 404
     except ValidationError as err:
         return jsonify(err.messages), 400
+
+
+
+#date_str = appointment_data['appointment_datetime'].date().strftime('%Y-%m-%d')
+#time_str = appointment_data['appointment_datetime'].time().strftime('%H:%M')
+#message = f"A new appointment has been scheduled for you on {date_str} at {time_str}. Appointment id: {str(created_appointment['_id'])}"
+#notification = {
+#    'subject': "New Appointment Scheduled",
+#    'description':message,
+#    'receiver':[appointment_data['dentist_email'], appointment_data['patient_email']]
+#}
