@@ -30,8 +30,7 @@ def create_appointment_endpoint():
             correlation_id = str(uuid.uuid4())
             appointment_data['correlation_id'] = correlation_id
             message_json = json.dumps(appointment_data, default=lambda x: x.isoformat() if isinstance(x, datetime) else None)
-            publish_result = publishMessage("booking", message_json)
-            print(publish_result)
+            publish_result = publishMessage("booking/create", message_json)
             if publish_result is not None:
                 return {'error': publish_result}, 501
             
@@ -58,6 +57,11 @@ def delete_appointment_endpoint(appointment_id):
     Expects an appointment ID.
     Returns a success message and status code 200 if successful.
     """
+
+    publish_result = publishMessage("booking/delete", str(appointment_id))
+    if publish_result is not None:
+        return {'error': publish_result}, 501
+    
     result = times.delete_one({'_id': appointment_id})
     if result.deleted_count:
         return jsonify({"message": "Appointment deleted successfully"}), 200
@@ -98,11 +102,22 @@ def update_appointment_endpoint(appointment_id):
     schema = BookingSchema()
     try:
         appointment_data = schema.load(request.json)
-        result = times.update_one({'_id': appointment_id}, {'$set': appointment_data})
-        if result.matched_count:
-            return jsonify({"message": "Appointment updated successfully"}), 200
+        correlation_id = str(uuid.uuid4())
+        appointment_data['correlation_id'] = correlation_id
+        message_json = json.dumps(appointment_data, default=lambda x: x.isoformat() if isinstance(x, datetime) else None)
+        publish_result = publishMessage("booking/create", message_json)
+        if publish_result is not None:
+            return {'error': publish_result}, 501
+        
+        confirmation = wait_for_acknowledgment(correlation_id)
+        if confirmation == True:
+            result = times.update_one({'_id': appointment_id}, {'$set': appointment_data})
+            if result.matched_count:
+                return jsonify({"message": "Appointment updated successfully"}), 200
+            else:
+                return jsonify({"message": "Appointment not found"}), 404
         else:
-            return jsonify({"message": "Appointment not found"}), 404
+            return jsonify({"message": "Appointment Could not be updated plase try againe later"}), 404
     except ValidationError as err:
         return jsonify(err.messages), 400
 
