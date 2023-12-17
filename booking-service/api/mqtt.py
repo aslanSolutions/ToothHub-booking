@@ -5,7 +5,6 @@ mqtt_client.tls_set(tls_version=mqtt.ssl.PROTOCOL_TLS)
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print("Connected succsfully")
         mqtt_client.subscribe("acknowledgment")
     else:
         print("Connection failed with code " + str(rc))

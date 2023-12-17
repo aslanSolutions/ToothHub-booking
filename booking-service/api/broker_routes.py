@@ -43,14 +43,15 @@ def wait_for_acknowledgment(correlation_id):
 
     while acknowledgment_received is None and time.time() - start_time < timeout:
         time.sleep(1.0)
-    
     # Unsubscribe from the acknowledgment topic
     mqtt_client.unsubscribe(acknowledgment_topic)
+
+    if acknowledgment_received is None:
+        return False
     if acknowledgment_received['acknowledgment'] == 'True' and acknowledgment_received['correlation_id'] == str(correlation_id):
         return True
-
     else :
-        return False 
+        return False
 
 
 mqtt_client.on_message = on_message
