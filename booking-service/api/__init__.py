@@ -32,6 +32,11 @@ def create_app():
     app.config['MQTT_BROKER_ADDRESS'] = brokerAdress
     app.config['MQTT_PORT'] = brokerPort
 
+    apifairy.init_app(app)
+    ma.init_app(app)
+    jwt.init_app(app)
+
+    app.register_blueprint(bp)
     # Add the MQTT client to the app context
     app.mqtt_client = mqtt_client
 
@@ -40,10 +45,5 @@ def create_app():
     mqtt_client.connect(app.config['MQTT_BROKER_ADDRESS'], app.config['MQTT_PORT'])
     mqtt_client.loop_start()
 
-    apifairy.init_app(app)
-    ma.init_app(app)
-    jwt.init_app(app)
-
-    app.register_blueprint(bp)
 
     return app
