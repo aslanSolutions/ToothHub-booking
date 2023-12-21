@@ -5,7 +5,7 @@ mqtt_client.tls_set(tls_version=mqtt.ssl.PROTOCOL_TLS)
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        mqtt_client.subscribe("booking/create")
+        mqtt_client.subscribe("availability")
     else:
         print("Connection failed with code " + str(rc))
 

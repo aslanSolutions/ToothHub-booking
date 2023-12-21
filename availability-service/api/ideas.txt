@@ -1,0 +1,17 @@
+The website is designed to be fault-tolerant with a focus on maintaining continuous service availability for users. 
+One potential point of failure is when the broker becomes unreachable, 
+or the service intended to receive a message from the broker faces connectivity issues. 
+To ensure availability and prevent data loss, a dedicated service, serving both dentists and patients, 
+will actively log errors and store data for subsequent retries. Once the broker is online again, 
+the service will automatically attempt to resend the messages, 
+ensuring seamless communication between all parties.
+
+In situations where multiple users attempt to book the same date, only one will successfully secure the appointment. 
+The booking service initiates the process by sending a message containing the desired booking date
+to the broker. Before proceeding, the booking service awaits an acknowledgment message from the broker. 
+The broker, in turn, forwards the message to the availability service to check the selected date's 
+current status. If the date is available, an acknowledgment message is published to the broker, 
+allowing the booking service to proceed with the appointment reservation. 
+If the selected date has already been taken, the user will receive a prompt indicating 
+that the date is no longer available. They will be advised to either choose an alternative 
+time slot or add the current slot to their wish list.
