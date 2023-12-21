@@ -6,7 +6,10 @@ from .routes import bp
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
+from .mqtt import mqtt_client
 
+brokerAdress = "0169ad6feac84c25b5b11b5157be1bd8.s2.eu.hivemq.cloud"
+brokerPort = 8883
 
 apifairy = APIFairy()
 ma = Marshmallow()
@@ -23,13 +26,23 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
     app.config['JWT_TOKEN_LOCATION'] = ['headers']
 
+    # Set the MQTT broker address and port
+    app.config['MQTT_BROKER_ADDRESS'] = brokerAdress
+    app.config['MQTT_PORT'] = brokerPort
+
     CORS(app)
 
     apifairy.init_app(app)
     ma.init_app(app)
     jwt.init_app(app)
+    app.mqtt_client = mqtt_client
 
     # Register the blueprint
     app.register_blueprint(bp)
+
+    # Start the MQTT client loop in a separate thread
+    # Connecting the MQTT client
+    mqtt_client.connect(app.config['MQTT_BROKER_ADDRESS'], app.config['MQTT_PORT'])
+    mqtt_client.loop_start()
 
     return app

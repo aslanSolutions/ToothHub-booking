@@ -10,6 +10,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 bp = Blueprint('Wishlist', __name__, url_prefix='/wishlist')
 wishlist_collection = users
+Wishlists_Schema = WishlistSchema(many=True)
 
 @bp.route('/create', methods=['POST'])
 @jwt_required()
@@ -75,3 +76,17 @@ def delete_wishlist(wishlist_id):
         return jsonify({"message": f"wishlist with ID {wishlist_id} deleted successfully"}), 200
     else:
         return jsonify({"message": f"No dentist found with ID {wishlist_id}"}), 404
+
+
+def get_wishlists(date):
+    wishlist = users.find({"date":date})
+    wishlists = list(wishlist)
+
+    # Convert ObjectId to string for JSON serialization
+    for wishlist in wishlists:
+        wishlist['_id'] = str(wishlist['_id'])
+
+    if wishlist:
+        return jsonify(wishlists)
+    else:
+        return jsonify({"message": f"No wishlist matches the spesific date: {date}"}), 404
