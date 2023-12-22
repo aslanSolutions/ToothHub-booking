@@ -3,6 +3,7 @@ from .schema import TimeSlotSchema, AvailabilityTimeSchema
 from .db import times
 from bson import json_util
 import datetime
+from .broker_routes import publishMessage
 
 bp = Blueprint('availability', __name__, url_prefix='/availability')
 
@@ -27,11 +28,13 @@ def set_availability():
         times.update_one({'_id': existing_entry['_id']}, {
                          '$set': {'time_slots': new_time_slots}})
         updated_entry = times.find_one({'_id': existing_entry['_id']})
+        publishMessage('availability', updated_entry)
         return jsonify({"message": "Availability updated successfully", "availability": json_util.dumps(updated_entry)}), 200
     else:
         result = times.insert_one(data)
         new_availability_id = result.inserted_id
         created_availability = times.find_one({'_id': new_availability_id})
+        publishMessage('availability', created_availability)
         return jsonify({"message": "Availability set successfully", "availability": json_util.dumps(created_availability)}), 201
 
 
