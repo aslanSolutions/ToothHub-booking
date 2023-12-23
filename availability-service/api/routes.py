@@ -1,14 +1,17 @@
+import json
 from flask import Blueprint, jsonify, request
 from .schema import TimeSlotSchema, AvailabilityTimeSchema
 from .db import times
 from bson import json_util
 import datetime
-from .broker_routes import publishMessage
+from .broker_routes import publishMessage, mqtt_client
+from bson import ObjectId
+
 
 bp = Blueprint('availability', __name__, url_prefix='/availability')
 
 
-@bp.route('/set_availability', methods=['POST'])
+@bp.route('/', methods=['POST'])
 def set_availability():
     data = request.get_json()
     errors = AvailabilityTimeSchema().validate(data)
@@ -28,13 +31,13 @@ def set_availability():
         times.update_one({'_id': existing_entry['_id']}, {
                          '$set': {'time_slots': new_time_slots}})
         updated_entry = times.find_one({'_id': existing_entry['_id']})
-        publishMessage('availability', updated_entry)
+        publishMessage('availability', json_util.dumps(updated_entry))
         return jsonify({"message": "Availability updated successfully", "availability": json_util.dumps(updated_entry)}), 200
     else:
         result = times.insert_one(data)
         new_availability_id = result.inserted_id
         created_availability = times.find_one({'_id': new_availability_id})
-        publishMessage('availability', created_availability)
+        publishMessage('availability', json_util.dumps(updated_entry))
         return jsonify({"message": "Availability set successfully", "availability": json_util.dumps(created_availability)}), 201
 
 
@@ -69,3 +72,81 @@ def get_timeslots():
     json_slots = json_util.dumps(available_slots_list)
 
     return jsonify({"available_slots": json_slots})
+
+# For higher performance we use function call when a message is received from the broker.
+def deleteAppointment(payload):
+    try:
+        object_id = ObjectId(payload['_id'])
+        try:
+            available_slots = times.delete_one({
+            '_id': object_id
+            })
+        except Exception as e:
+            print(e)
+        if available_slots.deleted_count > 0:
+            payload['acknowledgment'] = 'True'
+            publishMessage('acknowledgment', payload)
+        else:
+            payload['acknowledgment'] = 'False'
+            publishMessage('acknowledgment', payload)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def checkForAvailability(payload):
+    try:
+        appointmentDate = payload['appointment_datetime']
+        try:
+            available_slots = times.find_one({
+            "time_slots.0.start_time":str(appointmentDate)
+            })
+        except Exception as e:
+            print(e)
+        if available_slots:
+            payload['acknowledgment'] = 'True'
+            publishMessage('acknowledgment', payload)
+        else:
+            payload['acknowledgment'] = 'False'
+            publishMessage('acknowledgment', payload)
+    except Exception as e:
+        return {"error": str(e)}
+    
+
+def updateAppointment(payload):
+    try:
+        object_id = ObjectId(payload.pop('_id'))
+        try:
+            available_slots = times.update_one(
+            {"_id":object_id},
+            {'$set': payload}
+            )
+        except Exception as e:
+            print(e)
+        if available_slots.modified_count > 0:
+            payload['acknowledgment'] = 'True'
+            publishMessage('acknowledgment', payload)
+        else:
+            payload['acknowledgment'] = 'False'
+            publishMessage('acknowledgment', payload)
+    except Exception as e:
+        return {"error": str(e)}
+    
+
+    
+# Callback to handle incoming MQTT messages
+def on_message(client, userdata, msg):
+    try:
+        topic = msg.topic
+        if topic == 'booking/create':
+            payload = json.loads(msg.payload)
+            checkForAvailability(payload)
+        elif topic == 'booking/delete':
+            payload = json.loads(msg.payload)
+            deleteAppointment(payload)
+        elif topic == 'booking/update':
+            payload = json.loads(msg.payload)
+            updateAppointment(payload)
+    except Exception as e:
+        return {"error": str(e)}
+
+mqtt_client.on_message = on_message
