@@ -26,6 +26,7 @@ def create_app():
     # Set the MQTT broker address and port
     app.config['MQTT_BROKER_ADDRESS'] = brokerAdress
     app.config['MQTT_PORT'] = brokerPort
+    app.config['CLEAN_SESSION'] = True
 
     # Add the MQTT client to the app context
     app.mqtt_client = mqtt_client
@@ -34,5 +35,6 @@ def create_app():
     # Connecting the MQTT client
     mqtt_client.connect(app.config['MQTT_BROKER_ADDRESS'], app.config['MQTT_PORT'])
     mqtt_client.loop_start()
+    
 
     return app
