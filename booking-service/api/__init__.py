@@ -31,6 +31,7 @@ def create_app():
     # Set the MQTT broker address and port
     app.config['MQTT_BROKER_ADDRESS'] = brokerAdress
     app.config['MQTT_PORT'] = brokerPort
+    app.config['CLEAN_SESSION'] = True
 
     apifairy.init_app(app)
     ma.init_app(app)
@@ -42,8 +43,6 @@ def create_app():
 
     # Start the MQTT client loop in a separate thread
     # Connecting the MQTT client
-    mqtt_client.connect(app.config['MQTT_BROKER_ADDRESS'], app.config['MQTT_PORT'])
+    mqtt_client.connect("0169ad6feac84c25b5b11b5157be1bd8.s2.eu.hivemq.cloud", port=8883)
     mqtt_client.loop_start()
-
-
     return app

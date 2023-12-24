@@ -19,6 +19,7 @@ def publishMessage(topic,payload):
 def on_message(client, userdata, msg):
     global acknowledgment_received
     try:
+        print(msg.payload)
         payload = json.loads(msg.payload['appointment_datetime'])
         print(payload)
         whishLists = get_wishlists(payload)

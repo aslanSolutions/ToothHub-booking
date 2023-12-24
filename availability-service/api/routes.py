@@ -1,9 +1,10 @@
 import json
 from flask import Blueprint, jsonify, request
+import timedelta
 from .schema import TimeSlotSchema, AvailabilityTimeSchema
 from .db import times
 from bson import json_util
-import datetime
+from datetime import datetime, timedelta
 from .broker_routes import publishMessage, mqtt_client
 from bson import ObjectId
 
@@ -76,7 +77,8 @@ def get_timeslots():
 # For higher performance we use function call when a message is received from the broker.
 def deleteAppointment(payload):
     try:
-        object_id = ObjectId(payload['_id'])
+        json_payload = json.loads(payload)
+        object_id = ObjectId(json_payload['appointment_id'])
         try:
             available_slots = times.delete_one({
             '_id': object_id
@@ -84,52 +86,62 @@ def deleteAppointment(payload):
         except Exception as e:
             print(e)
         if available_slots.deleted_count > 0:
-            payload['acknowledgment'] = 'True'
-            publishMessage('acknowledgment', payload)
+            json_payload['acknowledgment'] = 'True'
+            json_payload['topic'] = 'delete/booking'
+            publishMessage('acknowledgment', json_payload)
         else:
-            payload['acknowledgment'] = 'False'
-            publishMessage('acknowledgment', payload)
+            json_payload['acknowledgment'] = 'False'
+            publishMessage('acknowledgment', json_payload)
     except Exception as e:
-        return {"error": str(e)}
+        print ({"error": str(e)})
 
 
 def checkForAvailability(payload):
     try:
-        appointmentDate = payload['appointment_datetime']
+        json_payload = json.loads(payload)
+        appointmentDate = json_payload['appointment_datetime']
         try:
             available_slots = times.find_one({
-            "time_slots.0.start_time":str(appointmentDate)
+            "time_slots.start_time": {
+            "$gte": appointmentDate,
+            }
             })
         except Exception as e:
-            print(e)
+            print( {"error": str(e)})
         if available_slots:
-            payload['acknowledgment'] = 'True'
-            publishMessage('acknowledgment', payload)
+            print("Found available slot: ")
+            print(available_slots)
+            json_payload['acknowledgment'] = 'False'
+            publishMessage('acknowledgment', json.dumps(json_payload))
         else:
-            payload['acknowledgment'] = 'False'
-            publishMessage('acknowledgment', payload)
+            print("No available_slots were found")
+            json_payload['acknowledgment'] = 'True'
+            json_payload['topic'] = 'create/booking'
+            publishMessage('acknowledgment', json.dumps(json_payload))
     except Exception as e:
-        return {"error": str(e)}
+        print ({"error": str(e)})
     
 
 def updateAppointment(payload):
     try:
-        object_id = ObjectId(payload.pop('_id'))
+        json_payload = json.loads(payload)
+        object_id = ObjectId(json_payload.pop('id'))
         try:
             available_slots = times.update_one(
             {"_id":object_id},
-            {'$set': payload}
+            {'$set': json_payload.pop('correlation_id')}
             )
         except Exception as e:
             print(e)
         if available_slots.modified_count > 0:
-            payload['acknowledgment'] = 'True'
-            publishMessage('acknowledgment', payload)
+            json_payload['acknowledgment'] = 'True'
+            json_payload['topic'] = 'update/booking'
+            publishMessage('acknowledgment', json_payload)
         else:
-            payload['acknowledgment'] = 'False'
-            publishMessage('acknowledgment', payload)
+            json_payload['acknowledgment'] = 'False'
+            publishMessage('acknowledgment', json_payload)
     except Exception as e:
-        return {"error": str(e)}
+        print ({"error": str(e)})
     
 
     
@@ -137,16 +149,24 @@ def updateAppointment(payload):
 def on_message(client, userdata, msg):
     try:
         topic = msg.topic
+        payload = (msg.payload.decode("utf-8"))
+        json_payload = json.loads(payload)
+        print(json_payload)
         if topic == 'booking/create':
-            payload = json.loads(msg.payload)
-            checkForAvailability(payload)
+            print("Create request resived...")
+            try:
+                checkForAvailability(json_payload)
+            except Exception as e:
+                print( {"error": str(e)})
         elif topic == 'booking/delete':
-            payload = json.loads(msg.payload)
-            deleteAppointment(payload)
+            print("Delete request resived...")
+            deleteAppointment(json_payload)
         elif topic == 'booking/update':
-            payload = json.loads(msg.payload)
-            updateAppointment(payload)
+            print("Update request resived...")
+            updateAppointment(json_payload)
+        else:
+            print("payload resived but nothing to do")
     except Exception as e:
-        return {"error": str(e)}
+        print( {"error": str(e)})
 
 mqtt_client.on_message = on_message

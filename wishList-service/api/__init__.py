@@ -7,6 +7,8 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 from .mqtt import mqtt_client
+from .broker_routes import publishMessage
+
 
 brokerAdress = "0169ad6feac84c25b5b11b5157be1bd8.s2.eu.hivemq.cloud"
 brokerPort = 8883
