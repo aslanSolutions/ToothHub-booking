@@ -62,7 +62,7 @@ def delete_appointment_endpoint(appointment_id):
         correlation_id = str(uuid.uuid4())
         object_id = ObjectId(appointment_id)
         appointment_data = {"appointment_id": str(object_id), "correlation_id": correlation_id}
-        message_json = json.dumps(appointment_data, default=lambda x: x.isoformat() if isinstance(x, datetime) else None)
+        message_json = json.dumps(appointment_data)
         publish_result = publishMessage("booking/delete", message_json)
         if publish_result is not None:
             return {'error': publish_result}, 501
@@ -139,14 +139,3 @@ def update_appointment_endpoint(appointment_id):
             return jsonify({"message": "Appointment Could not be updated plase try againe later"}), 404
     except ValidationError as err:
         return jsonify(err.messages), 400
-
-
-
-#date_str = appointment_data['appointment_datetime'].date().strftime('%Y-%m-%d')
-#time_str = appointment_data['appointment_datetime'].time().strftime('%H:%M')
-#message = f"A new appointment has been scheduled for you on {date_str} at {time_str}. Appointment id: {str(created_appointment['_id'])}"
-#notification = {
-#    'subject': "New Appointment Scheduled",
-#    'description':message,
-#    'receiver':[appointment_data['dentist_email'], appointment_data['patient_email']]
-#}

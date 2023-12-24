@@ -7,7 +7,6 @@ from bson import ObjectId
 import requests
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-
 bp = Blueprint('Wishlist', __name__, url_prefix='/wishlist')
 wishlist_collection = users
 Wishlists_Schema = WishlistSchema(many=True)

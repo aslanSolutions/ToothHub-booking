@@ -1,6 +1,6 @@
 import paho.mqtt.client as mqtt
 
-mqtt_client = mqtt.Client(client_id="booking-id", protocol=mqtt.MQTTv311)
+mqtt_client = mqtt.Client(client_id="booking-service", clean_session=True, protocol=mqtt.MQTTv311)
 mqtt_client.tls_set(tls_version=mqtt.ssl.PROTOCOL_TLS)
 
 def on_connect(client, userdata, flags, rc):
