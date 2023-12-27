@@ -8,6 +8,7 @@ def on_connect(client, userdata, flags, rc):
         mqtt_client.subscribe("booking/create")
         mqtt_client.subscribe("booking/delete")
         mqtt_client.subscribe("booking/update")
+        mqtt_client.subscribe("booking/confirm")
     else:
         print("Connection failed with code " + str(rc))
 
