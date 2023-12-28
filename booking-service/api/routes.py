@@ -38,7 +38,7 @@ def create_appointment_endpoint():
 
             confirmation = wait_for_acknowledgment(correlation_id)
             if confirmation == True:
-                print(confirmation)
+                del appointment_data['correlation_id']
                 result = times.insert_one(appointment_data)
                 new_appointment_id = result.inserted_id
                 created_appointment = times.find_one(
@@ -48,13 +48,9 @@ def create_appointment_endpoint():
                 # Publish confirmation of successful booking
                 confirmation_message = {
                     "status": "success",
-                    "patient_email": appointment_data['patient_email'],
                     "dentist_email": appointment_data['dentist_email'],
                     "appointment_datetime": appointment_data['appointment_datetime'].isoformat(),
-                    "correlation_id": appointment_data['correlation_id'],
-                    "acknowledgment": True
                 }
-                print("Confirmation data: ", confirmation_message)
                 confirmation_result = publishMessage("booking/confirm",
                                json.dumps(confirmation_message))
                 if confirmation_result is not None:
@@ -74,34 +70,35 @@ def create_appointment_endpoint():
 
 @bp.route('/<string:appointment_id>', methods=['DELETE'])
 def delete_appointment_endpoint(appointment_id):
-    """
-    Endpoint to delete an appointment.
-    Expects an appointment ID.
-    Returns a success message and status code 200 if successful.
-    """
     try:
         correlation_id = str(uuid.uuid4())
         object_id = ObjectId(appointment_id)
-        appointment_data = {"appointment_id": str(
-            object_id), "correlation_id": correlation_id}
-        message_json = json.dumps(appointment_data)
-        publish_result = publishMessage("booking/delete", message_json)
-        if publish_result is not None:
-            return {'error': publish_result}, 501
+        appointment_data = times.find_one({"_id": object_id})
 
-        confirmation = wait_for_acknowledgment(correlation_id)
-        if confirmation == True:
-            result = times.delete_one({'_id': object_id})
-            if result:
-                return jsonify({"message": "Appointment deleted successfully"}), 200
+        if appointment_data:
+            appointment_data['_id'] = str(appointment_data['_id'])
+            appointment_data['correlation_id'] = correlation_id
+
+            message_json = json.dumps(appointment_data, default=str)
+
+            publish_result = publishMessage("booking/delete", message_json)
+            if publish_result is not None:
+                return {'error': publish_result}, 501
+
+            confirmation = wait_for_acknowledgment(correlation_id)
+            if confirmation == True:
+                result = times.delete_one({'_id': object_id})
+                if result.deleted_count > 0:
+                    return jsonify({"message": "Appointment deleted successfully"}), 200
+                else:
+                    return {"message": "Appointment not found"}, 404
             else:
-                return {"message": "Appointment not found"}, 404
+                return {"message": "Could not delete the appointment, please try again later"}, 501
         else:
-            return {"message": "Could not delete the appointment, plase try againe later"}, 501
+            return {"message": "Appointment not found"}, 404
+
     except Exception as e:
         return jsonify({'error': str(e)}), 501
-
-
 @bp.route('/<string:appointment_id>', methods=['GET'])
 def get_appointment_endpoint(appointment_id):
     """

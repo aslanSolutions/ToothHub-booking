@@ -21,6 +21,7 @@ def on_message(client, userdata, msg):
     global acknowledgment_received
     try:
         payload = json.loads(msg.payload)
+        print("Payload:", payload)
         json_payload = json.loads(payload)
         print(json_payload)
         acknowledgment_received = json_payload

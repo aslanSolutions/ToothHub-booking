@@ -32,13 +32,16 @@ def set_availability():
         times.update_one({'_id': existing_entry['_id']}, {
                          '$set': {'time_slots': new_time_slots}})
         updated_entry = times.find_one({'_id': existing_entry['_id']})
-        publishMessage('availability', json_util.dumps(updated_entry))
+        date_time = {"date": updated_entry["date"]}
+        message_json = json_util.dumps(date_time)
+        publishMessage('availability', message_json)
         return jsonify({"message": "Availability updated successfully", "availability": json_util.dumps(updated_entry)}), 200
     else:
         result = times.insert_one(data)
         new_availability_id = result.inserted_id
         created_availability = times.find_one({'_id': new_availability_id})
-        publishMessage('availability', json_util.dumps(updated_entry))
+        date_time = {"date": created_availability["date"]}
+        publishMessage('availability', json_util.dumps(date_time))
         return jsonify({"message": "Availability set successfully", "availability": json_util.dumps(created_availability)}), 201
 
 
@@ -77,23 +80,29 @@ def get_timeslots():
 # For higher performance we use function call when a message is received from the broker.
 
 
-def deleteAppointment(payload):
+def deleteAppointment(data):
     try:
-        json_payload = json.loads(payload)
-        object_id = ObjectId(json_payload['appointment_id'])
-        try:
-            available_slots = times.delete_one({
-                '_id': object_id
-            })
-        except Exception as e:
-            print(e)
-        if available_slots.deleted_count > 0:
-            json_payload['acknowledgment'] = 'False'
-            json_payload['topic'] = 'delete/booking'
-            publishMessage('acknowledgment', json_payload)
+        dentist_email = data['dentist_email']
+        # Format the date correctly
+        appointmentDate = datetime.strptime(data['appointment_datetime'], '%Y-%m-%d %H:%M:%S').isoformat()
+        query = {
+            'dentist_email': dentist_email,
+            "time_slots": {
+                "$elemMatch": {
+                    "start_time": appointmentDate,
+                }
+            }
+        }
+
+        result = times.update_one(query, {'$set': {'time_slots.$.booked': False}})
+        if result.modified_count > 0:
+            data['acknowledgment'] = 'True'
+            data['topic'] = 'booking/delete'
+            publishMessage('acknowledgment', json.dumps(data))
+            publishMessage('availability', json_util.dumps(data))
         else:
-            json_payload['acknowledgment'] = 'True'
-            publishMessage('acknowledgment', json_payload)
+            data['acknowledgment'] = 'False'
+            publishMessage('acknowledgment', json.dumps(data))
     except Exception as e:
         print({"error": str(e)})
 
@@ -114,17 +123,15 @@ def checkForAvailability(payload):
         except Exception as e:
             print({"error": str(e)})
 
-        print("Slots:", available_slots)
-
         if available_slots:
             print("Found available slot: ", available_slots)
             json_payload['acknowledgment'] = 'True'
+            json_payload['topic'] = 'booking/create'
             publishMessage('acknowledgment', json.dumps(json_payload))
 
         else:
             print("No available_slots were found")
             json_payload['acknowledgment'] = 'False'
-            json_payload['topic'] = 'create/booking'
             publishMessage('acknowledgment', json.dumps(json_payload))
     except Exception as e:
         print({"error": str(e)})
@@ -145,7 +152,6 @@ def updateAppointment(payload):
         if available_slots.modified_count > 0:
             json_payload['acknowledgment'] = 'True'
             json_payload['topic'] = 'update/booking'
-            print("Data", json_payload)
             publishMessage('acknowledgment', json_payload)
         else:
             json_payload['acknowledgment'] = 'False'
@@ -157,7 +163,6 @@ def updateAppointment(payload):
 def handleConfirmation(data):
     dentist_email = data['dentist_email']
     appointmentDate = data['appointment_datetime']
-    print("Got data:", data)
 
     if data['status'] == "success":
         # Find the corresponding availability entry and update
@@ -187,7 +192,6 @@ def on_message(client, userdata, msg):
         topic = msg.topic
         payload = (msg.payload.decode("utf-8"))
         json_payload = json.loads(payload)
-        print(json_payload)
         if topic == 'booking/create':
             print("Create request resived...")
             try:
@@ -196,7 +200,8 @@ def on_message(client, userdata, msg):
                 print({"error": str(e)})
         elif topic == 'booking/delete':
             print("Delete request resived...")
-            deleteAppointment(json_payload)
+            last_payload = json.loads(json_payload)
+            deleteAppointment(last_payload)
         elif topic == 'booking/update':
             print("Update request resived...")
             updateAppointment(json_payload)
