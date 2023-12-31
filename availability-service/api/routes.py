@@ -24,11 +24,13 @@ def set_availability():
     if not dentist_email or not date:
         return jsonify({"message": "Dentist email and date are required"}), 400
 
-    # Check if an entry for this date and dentist already exists
+    for time_slot in data['time_slots']:
+        time_slot.setdefault('booked', False)
+
     existing_entry = times.find_one(
         {'dentist_email': dentist_email, 'date': date})
     if existing_entry:
-        new_time_slots = data.get('time_slots')
+        new_time_slots = data['time_slots']
         times.update_one({'_id': existing_entry['_id']}, {
                          '$set': {'time_slots': new_time_slots}})
         updated_entry = times.find_one({'_id': existing_entry['_id']})
@@ -45,34 +47,52 @@ def set_availability():
         return jsonify({"message": "Availability set successfully", "availability": json_util.dumps(created_availability)}), 201
 
 
+
 @bp.route('/get_availability', methods=['GET'])
 def get_availability():
     dentist_email = request.args.get('dentist_email')
+    booked_status = request.args.get('booked', default='false').lower() == 'true' 
 
     if not dentist_email:
         return jsonify({"message": "Dentist email is required"}), 400
 
-    available_slots = times.find({'dentist_email': dentist_email}, {'_id': 0})
+    query = {'dentist_email': dentist_email}
 
-    return jsonify({"availability": list(available_slots)})
+    available_slots = times.find(query, {'_id': 0})
+
+    filtered_slots = []
+    for slot in available_slots:
+        filtered_time_slots = [ts for ts in slot['time_slots'] if ts['booked'] == booked_status]
+        if filtered_time_slots:
+            slot['time_slots'] = filtered_time_slots
+            filtered_slots.append(slot)
+
+    return jsonify({"availability": filtered_slots})
 
 
 @bp.route('/get_timeslots', methods=['GET'])
 def get_timeslots():
     selected_date = request.args.get('date')
+    booked_param = request.args.get('booked', 'false').lower() == 'true'
 
     if not selected_date:
         return jsonify({"message": "Date is required"}), 400
 
     try:
-        datetime.datetime.strptime(selected_date, '%Y-%m-%d')
+        datetime.strptime(selected_date, '%Y-%m-%d') 
     except ValueError:
         return jsonify({"message": "Invalid date format"}), 400
 
-    available_slots = times.find({"date": selected_date},
-                                 {"dentist_email": 1, "time_slots": 1, "_id": 0})
+    query = {"date": selected_date, "time_slots.booked": booked_param}
 
-    available_slots_list = list(available_slots)
+    available_slots = times.find(query, {"dentist_email": 1, "time_slots": 1, "_id": 0})
+
+    # Filter out booked timeslots from each document's timeslot list
+    available_slots_list = []
+    for slot in available_slots:
+        slot['time_slots'] = [ts for ts in slot['time_slots'] if ts['booked'] == booked_param]
+        available_slots_list.append(slot)
+
     json_slots = json_util.dumps(available_slots_list)
 
     return jsonify({"available_slots": json_slots})
@@ -111,6 +131,7 @@ def checkForAvailability(payload):
     try:
         json_payload = json.loads(payload)
         appointmentDate = json_payload['appointment_datetime']
+        print(f"Json:", appointmentDate)
         try:
             available_slots = times.find_one({
                 "time_slots": {

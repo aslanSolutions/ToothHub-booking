@@ -20,8 +20,9 @@ def create_appointment_endpoint():
     Returns a success message and status code 201 if successful.
     """
     schema = BookingSchema()
-
+    print(request.json)
     appointment_data = schema.load(request.json)
+    
     try:
         # validate_url = "http://127.0.0.1:5005/auth/validate"
         # headers = {"Authorization": request.headers.get('Authorization')}
