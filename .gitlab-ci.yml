@@ -1,4 +1,4 @@
-image: python:3.8
+image: python:3.8-slim
 
 stages:
   - build
@@ -7,8 +7,6 @@ stages:
 before_script:
   - export LC_ALL=C.UTF-8
   - export LANG=C.UTF-8
-  - apt-get update -qy || true
-  - apt-get install -y python3-venv || true
   - python -m venv venv
   - source venv/bin/activate
 
