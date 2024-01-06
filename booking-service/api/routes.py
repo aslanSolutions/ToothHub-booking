@@ -20,8 +20,9 @@ def create_appointment_endpoint():
     Returns a success message and status code 201 if successful.
     """
     schema = BookingSchema()
-
+    print(request.json)
     appointment_data = schema.load(request.json)
+    
     try:
         # validate_url = "http://127.0.0.1:5005/auth/validate"
         # headers = {"Authorization": request.headers.get('Authorization')}
@@ -38,7 +39,7 @@ def create_appointment_endpoint():
 
             confirmation = wait_for_acknowledgment(correlation_id)
             if confirmation == True:
-                print(confirmation)
+                del appointment_data['correlation_id']
                 result = times.insert_one(appointment_data)
                 new_appointment_id = result.inserted_id
                 created_appointment = times.find_one(
@@ -48,13 +49,9 @@ def create_appointment_endpoint():
                 # Publish confirmation of successful booking
                 confirmation_message = {
                     "status": "success",
-                    "patient_email": appointment_data['patient_email'],
                     "dentist_email": appointment_data['dentist_email'],
                     "appointment_datetime": appointment_data['appointment_datetime'].isoformat(),
-                    "correlation_id": appointment_data['correlation_id'],
-                    "acknowledgment": True
                 }
-                print("Confirmation data: ", confirmation_message)
                 confirmation_result = publishMessage("booking/confirm",
                                json.dumps(confirmation_message))
                 if confirmation_result is not None:
@@ -74,34 +71,35 @@ def create_appointment_endpoint():
 
 @bp.route('/<string:appointment_id>', methods=['DELETE'])
 def delete_appointment_endpoint(appointment_id):
-    """
-    Endpoint to delete an appointment.
-    Expects an appointment ID.
-    Returns a success message and status code 200 if successful.
-    """
     try:
         correlation_id = str(uuid.uuid4())
         object_id = ObjectId(appointment_id)
-        appointment_data = {"appointment_id": str(
-            object_id), "correlation_id": correlation_id}
-        message_json = json.dumps(appointment_data)
-        publish_result = publishMessage("booking/delete", message_json)
-        if publish_result is not None:
-            return {'error': publish_result}, 501
+        appointment_data = times.find_one({"_id": object_id})
 
-        confirmation = wait_for_acknowledgment(correlation_id)
-        if confirmation == True:
-            result = times.delete_one({'_id': object_id})
-            if result:
-                return jsonify({"message": "Appointment deleted successfully"}), 200
+        if appointment_data:
+            appointment_data['_id'] = str(appointment_data['_id'])
+            appointment_data['correlation_id'] = correlation_id
+
+            message_json = json.dumps(appointment_data, default=str)
+
+            publish_result = publishMessage("booking/delete", message_json)
+            if publish_result is not None:
+                return {'error': publish_result}, 501
+
+            confirmation = wait_for_acknowledgment(correlation_id)
+            if confirmation == True:
+                result = times.delete_one({'_id': object_id})
+                if result.deleted_count > 0:
+                    return jsonify({"message": "Appointment deleted successfully"}), 200
+                else:
+                    return {"message": "Appointment not found"}, 404
             else:
-                return {"message": "Appointment not found"}, 404
+                return {"message": "Could not delete the appointment, please try again later"}, 501
         else:
-            return {"message": "Could not delete the appointment, plase try againe later"}, 501
+            return {"message": "Appointment not found"}, 404
+
     except Exception as e:
         return jsonify({'error': str(e)}), 501
-
-
 @bp.route('/<string:appointment_id>', methods=['GET'])
 def get_appointment_endpoint(appointment_id):
     """
@@ -130,6 +128,44 @@ def get_all_appointments_endpoint():
     appointments = list(times.find())
     schema = BookingSchema(many=True)
     return jsonify(schema.dump(appointments)), 200
+
+@bp.route('/get_by_date/', methods=['GET'])
+def get_appointments_by_date():
+    """
+    Endpoint to get appointments for a specific date.
+    Returns a list of appointments and status code 200.
+    """
+    print("Received request to /get_by_date/")
+    
+    dentist_email = request.args.get('dentist_email')
+    
+    date_str = request.args.get('date')
+    
+    print(f"Received dentist_email: {dentist_email}")
+    print(f"Received date_str: {date_str}")
+
+    try:
+        date = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
+
+    print(f"Converted date: {date}")
+
+    # Adjust the query to consider the entire date range for the specified day
+    start_of_day = date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    appointments = list(times.find({
+        'dentist_email': dentist_email,
+        'appointment_datetime': {'$gte': start_of_day, '$lte': end_of_day}
+    }))
+    
+    schema = BookingSchema(many=True)
+    
+    print(f"Appointments found: {appointments}")
+    
+    return jsonify(schema.dump(appointments)), 200
+
 
 
 @bp.route('/<string:appointment_id>', methods=['PATCH'])

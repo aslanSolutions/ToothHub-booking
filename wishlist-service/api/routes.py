@@ -6,46 +6,34 @@ from.db import users
 from bson import ObjectId 
 import requests
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from datetime import datetime
+
 
 bp = Blueprint('Wishlist', __name__, url_prefix='/wishlist')
 wishlist_collection = users
 Wishlists_Schema = WishlistSchema(many=True)
 
 @bp.route('/create', methods=['POST'])
-@jwt_required()
+##@jwt_required()
 def register_wishlist():
     # Create wishlist
     payload = request.get_json()
     logger.debug(f"Received payload: {payload}")
 
-    auth_header = request.headers.get('Authorization')
-    logger.debug(f"Authorization header received: {auth_header}")
     # Instantiate the schema and validate the payload
     schema = WishlistSchema()
     errors = schema.validate(payload)
     if errors:
         return jsonify({"message": "Validation error", "errors": errors}), 400
 
-    # Extract the JWT identity from the request
-    current_user_identity = get_jwt_identity()
+    # Proceed with wishlist creation
+    result = wishlist_collection.insert_one(payload)
+    new_wishlist_id = result.inserted_id
+    created_wishlist = wishlist_collection.find_one({'_id': new_wishlist_id})
 
-    # Make a validation request to the authentication service
-    validate_url = "http://127.0.0.1:5005/auth/validate"
-    headers = {"Authorization": request.headers.get('Authorization')}
-    validate_response = requests.get(validate_url, headers=headers)
-
-    if validate_response.status_code == 200:
-        # User is valid, proceed with wishlist creation
-        result = wishlist_collection.insert_one(payload)
-        new_wishlist_id = result.inserted_id
-        created_wishlist = wishlist_collection.find_one({'_id': new_wishlist_id})
-
-        # Convert ObjectId to string before returning the response
-        created_wishlist['_id'] = str(created_wishlist['_id'])
-        return jsonify(created_wishlist), 201
-    else:
-        # Validation failed
-        return jsonify({"message": "User validation failed"}), validate_response.status_code
+    # Convert ObjectId to string before returning the response
+    created_wishlist['_id'] = str(created_wishlist['_id'])
+    return jsonify(created_wishlist), 201
 
 
 
@@ -77,15 +65,17 @@ def delete_wishlist(wishlist_id):
         return jsonify({"message": f"No dentist found with ID {wishlist_id}"}), 404
 
 
-def get_wishlists(date):
-    wishlist = users.find({"date":date})
-    wishlists = list(wishlist)
+def get_wishlists(date_str):
+    # Convert the input date string to a datetime object
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+    
+    # Format the date in the same format as in your database
+    formatted_date = date_obj.strftime("%Y-%m-%dT%H:%M:%S")
 
-    # Convert ObjectId to string for JSON serialization
-    for wishlist in wishlists:
-        wishlist['_id'] = str(wishlist['_id'])
+    wishlist_cursor = users.find({"date": formatted_date}, {"patient_email": 1, "_id": 0})
+    wishlists = list(wishlist_cursor)
 
-    if wishlist:
-        return jsonify(wishlists)
-    else:
-        return jsonify({"message": f"No wishlist matches the spesific date: {date}"}), 404
+    # Extract only the patient_email from each wishlist
+    patient_emails = [wishlist['patient_email'] for wishlist in wishlists if 'patient_email' in wishlist]
+
+    return patient_emails

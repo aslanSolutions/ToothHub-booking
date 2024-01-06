@@ -4,6 +4,7 @@ from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from .routes import bp
 from .mqtt import mqtt_client
+import os
 
 apifairy = APIFairy()
 ma = Marshmallow()
@@ -13,6 +14,7 @@ brokerPort = 8883
 
 def create_app():
     app = Flask(__name__)
+    
     app.config['APIFAIRY_TITLE'] = 'Availible API'
     app.config['APIFAIRY_VERSION'] = '1.0'
 
