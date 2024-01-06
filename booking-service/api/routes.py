@@ -129,6 +129,44 @@ def get_all_appointments_endpoint():
     schema = BookingSchema(many=True)
     return jsonify(schema.dump(appointments)), 200
 
+@bp.route('/get_by_date/', methods=['GET'])
+def get_appointments_by_date():
+    """
+    Endpoint to get appointments for a specific date.
+    Returns a list of appointments and status code 200.
+    """
+    print("Received request to /get_by_date/")
+    
+    dentist_email = request.args.get('dentist_email')
+    
+    date_str = request.args.get('date')
+    
+    print(f"Received dentist_email: {dentist_email}")
+    print(f"Received date_str: {date_str}")
+
+    try:
+        date = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
+
+    print(f"Converted date: {date}")
+
+    # Adjust the query to consider the entire date range for the specified day
+    start_of_day = date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    appointments = list(times.find({
+        'dentist_email': dentist_email,
+        'appointment_datetime': {'$gte': start_of_day, '$lte': end_of_day}
+    }))
+    
+    schema = BookingSchema(many=True)
+    
+    print(f"Appointments found: {appointments}")
+    
+    return jsonify(schema.dump(appointments)), 200
+
+
 
 @bp.route('/<string:appointment_id>', methods=['PATCH'])
 def update_appointment_endpoint(appointment_id):

@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  availability-service:
+    build:
+      context: ./availability-service
+    ports:
+      - "5004:5004"
+
+  booking-service:
+    build:
+      context: ./booking-service
+    ports:
+      - "5002:5002"
+
+  wishList-service:
+    build:
+      context: ./wishlist-service
+    ports:
+      - "5006:5006"
+    image: wish-list-service-image

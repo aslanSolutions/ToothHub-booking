@@ -21,6 +21,7 @@ def create_app():
     load_dotenv()
 
     CORS(app)
+    print(app.url_map)
 
     app.config['APIFAIRY_TITLE'] = 'Appointment API'
     app.config['APIFAIRY_VERSION'] = '1.0'
