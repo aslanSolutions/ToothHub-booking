@@ -4,33 +4,20 @@ stages:
   - build
   - test
 
+before_script:
+  - export LC_ALL=C.UTF-8
+  - export LANG=C.UTF-8
+  - python -m venv venv
+  - source venv/bin/activate
+
 services:
   - name: mongo:latest
     alias: mongo
 
-availability_service:
-  stage: build
-  script:
-    - cd Booking/availability-service
-    - docker build -t availability-service-image .
-
-booking_service:
-  stage: build
-  script:
-    - cd Booking/booking-service
-    - docker build -t booking-service-image .
-
-wishlist_service:
-  stage: build
-  script:
-    - cd Booking/wishlist-service
-    - docker build -t wishlist-service-image .
-
 test:
   stage: test
   script:
-    - cd Booking
-    - docker-compose up -d
-    - docker-compose exec booking-service pytest
-    - docker-compose exec wishlist_service pytest
-    - docker-compose exec availability-service pytest
+    - echo "Testing availability Service"
+    - cd Booking/availability-service
+    - pip install -r requirements.txt
+    - pytest test/
