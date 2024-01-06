@@ -1,0 +1,36 @@
+image: python:3.8
+
+stages:
+  - build
+  - test
+
+services:
+  - name: mongo:latest
+    alias: mongo
+
+availability_service:
+  stage: build
+  script:
+    - cd Booking/availability-service
+    - docker build -t availability-service-image .
+
+booking_service:
+  stage: build
+  script:
+    - cd Booking/booking-service
+    - docker build -t booking-service-image .
+
+wishlist_service:
+  stage: build
+  script:
+    - cd Booking/wishlist-service
+    - docker build -t wishlist-service-image .
+
+test:
+  stage: test
+  script:
+    - cd Booking
+    - docker-compose up -d
+    - docker-compose exec booking-service pytest
+    - docker-compose exec wishlist_service pytest
+    - docker-compose exec availability-service pytest
