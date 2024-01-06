@@ -16,7 +16,7 @@ availability_service_test:
   stage: test
   script:
     - echo "Testing Availability Service"
-    - cd Booking/availability-service
+    - cd availability-service
     - python -m venv venv
     - source venv/bin/activate
     - pip install -r requirements.txt
