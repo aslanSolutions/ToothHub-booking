@@ -12,10 +12,10 @@ services:
   - name: mongo:latest
     alias: mongo
 
-Availability Service Test:
+availability_service_test:
   stage: test
   script:
-    - echo "Testing availability Service"
+    - echo "Testing Availability Service"
     - cd Booking/availability-service
     - python -m venv venv
     - source venv/bin/activate
