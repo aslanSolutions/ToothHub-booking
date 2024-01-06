@@ -8,9 +8,6 @@ before_script:
   - export LC_ALL=C.UTF-8
   - export LANG=C.UTF-8
 
-services:
-  - name: mongo:latest
-    alias: mongo
 
 availability_service_test:
   stage: test
