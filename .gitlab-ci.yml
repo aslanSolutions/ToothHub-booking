@@ -14,6 +14,8 @@ services:
 
 availability_service_test:
   stage: test
+  tags:
+    - docker
   script:
     - echo "Testing Availability Service"
     - cd availability-service
