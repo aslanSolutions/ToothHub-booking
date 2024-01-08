@@ -8,6 +8,8 @@ import os
 from dotenv import load_dotenv
 from .mqtt import mqtt_client
 from .broker_routes import publishMessage
+from .config import get_config
+
 
 
 brokerAdress = "0169ad6feac84c25b5b11b5157be1bd8.s2.eu.hivemq.cloud"
@@ -21,16 +23,8 @@ def create_app():
     
     app = Flask(__name__)
     load_dotenv()
+    app.config.from_object(get_config())
 
-    app.config['APIFAIRY_TITLE'] = 'Wishlist API'
-    app.config['APIFAIRY_VERSION'] = '1.0'
-
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
-    app.config['JWT_TOKEN_LOCATION'] = ['headers']
-
-    # Set the MQTT broker address and port
-    app.config['MQTT_BROKER_ADDRESS'] = brokerAdress
-    app.config['MQTT_PORT'] = brokerPort
 
     CORS(app)
 

@@ -9,8 +9,6 @@ from flask_cors import CORS
 from .mqtt import mqtt_client
 from .config import get_config
 
-brokerAdress = "0169ad6feac84c25b5b11b5157be1bd8.s2.eu.hivemq.cloud"
-brokerPort = 8883
 apifairy = APIFairy()
 ma = Marshmallow()
 jwt = JWTManager() 
