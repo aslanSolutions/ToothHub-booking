@@ -167,6 +167,14 @@ def get_appointments_by_date():
     return jsonify(schema.dump(appointments)), 200
 
 
+@bp.route('/get_by_email/', methods=['GET'])
+def get_appointments_by_patient_email():
+    patient_email = request.args.get('patient_email')
+
+    appointments = list(times.find({'patient_email': patient_email}))
+    schema = BookingSchema(many=True)
+
+    return jsonify(schema.dump(appointments)), 200
 
 @bp.route('/<string:appointment_id>', methods=['PATCH'])
 def update_appointment_endpoint(appointment_id):
