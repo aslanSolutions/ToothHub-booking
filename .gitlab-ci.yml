@@ -1,0 +1,25 @@
+image: python:3.8-slim
+
+stages:
+  - build
+  - test
+
+services:
+  - name: mongo:latest
+    alias: mongodb
+
+    
+before_script:
+  - export LC_ALL=C.UTF-8
+  - export LANG=C.UTF-8
+
+
+availability_service_test:
+  stage: test
+  tags:
+    - docker
+  script:
+    - echo "Testing Availability Service"
+    - cd availability-service
+    - pip install -r requirements.txt
+    - pytest test/
