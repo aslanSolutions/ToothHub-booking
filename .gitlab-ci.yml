@@ -16,7 +16,6 @@ variables:
 before_script:
   - export LC_ALL=C.UTF-8
   - export LANG=C.UTF-8
-  - pip install -r requirements.txt
 
 
 availability_service_test:
@@ -26,6 +25,7 @@ availability_service_test:
   script:
     - echo "Testing Availability Service"
     - cd availability-service
+    - pip install -r requirements.txt
     - pytest test/
 
 booking_service_test:
@@ -35,4 +35,5 @@ booking_service_test:
   script:
     - echo "Testing Availability Service"
     - cd booking-service
+    - pip install -r requirements.txt
     - pytest test/  
