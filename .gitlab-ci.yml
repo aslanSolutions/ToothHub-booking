@@ -5,8 +5,12 @@ stages:
   - test
 
 services:
-  - name: mongo:latest
-    alias: mongodb
+    - name: mvertes/alpine-mongo:latest
+      alias: mongo
+variables:
+  MONGODB_URI: "mongodb://mongo:27017/serverTestDB"
+
+
 
     
 before_script:
@@ -23,3 +27,13 @@ availability_service_test:
     - cd availability-service
     - pip install -r requirements.txt
     - pytest test/
+
+booking_service_test:
+  stage: test
+  tags:
+    - docker
+  script:
+    - echo "Testing Availability Service"
+    - cd booking-service
+    - pip install -r requirements.txt
+    - pytest test/  

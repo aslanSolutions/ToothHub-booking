@@ -9,7 +9,7 @@ class TestAppointmentsRoutes(TestCase):
 
     def create_app(self):
         app = create_app()
-        app.config.from_pyfile('test_config.py')
+        app.config.from_pyfile('config.py')
         return app
 
     @patch('api.routes.times.publishMessage')

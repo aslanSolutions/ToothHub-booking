@@ -5,7 +5,7 @@ import json
 class TestRoutes(TestCase):
     def create_app(self):
         app = create_app()
-        app.config.from_pyfile('test_config.py')
+        app.config.from_pyfile('config.py')
         return app
 
     def test_set_availability_route(self):
@@ -19,7 +19,7 @@ class TestRoutes(TestCase):
         }
 
         response = self.client.post('/availability/', json=data)
-        self.assertStatus(response, 200)
+        self.assertStatus(response, 201)
         self.assertIn('availability', json.loads(response.data))
 
     def test_get_availability_route(self):
