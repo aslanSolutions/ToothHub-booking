@@ -5,8 +5,12 @@ stages:
   - test
 
 services:
-  - name: mongo:latest
-    alias: mongodb
+    - name: mvertes/alpine-mongo:latest
+      alias: mongo
+variables:
+  MONGODB_URI: "mongodb://mongo:27017/serverTestDB"
+
+
 
     
 before_script:
