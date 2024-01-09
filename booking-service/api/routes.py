@@ -5,7 +5,6 @@ from marshmallow import ValidationError
 from .schema import BookingSchema
 from .db import times
 from .broker_routes import publishMessage, wait_for_acknowledgment
-import requests
 import uuid
 from bson import ObjectId
 
@@ -171,6 +170,17 @@ def get_appointments_by_patient_email():
     schema = BookingSchema(many=True)
 
     return jsonify(schema.dump(appointments)), 200
+
+@bp.route('/get_by_dentist/', methods=['GET'])
+def get_appointments_by_dentsit_email():
+    dentsit_email = request.args.get('dentist_email')
+
+    appointments = list(times.find({'dentist_email' : dentsit_email}))
+
+    schema = BookingSchema(many=True)
+
+    return jsonify(schema.dump(appointments)), 200
+
 
 @bp.route('/<string:appointment_id>', methods=['PATCH'])
 def update_appointment_endpoint(appointment_id):
