@@ -102,6 +102,8 @@ def get_timeslots():
 
 def deleteAppointment(data):
     try:
+
+        print(f"Date: ", data)
         dentist_email = data['dentist_email']
         # Format the date correctly
         appointmentDate = datetime.strptime(data['appointment_datetime'], '%Y-%m-%d %H:%M:%S').isoformat()
@@ -115,6 +117,7 @@ def deleteAppointment(data):
         }
 
         result = times.update_one(query, {'$set': {'time_slots.$.booked': False}})
+        print(f"Result:" , result)
         if result.modified_count > 0:
             data['acknowledgment'] = 'True'
             data['topic'] = 'booking/delete'
@@ -186,7 +189,6 @@ def handleConfirmation(data):
     appointmentDate = data['appointment_datetime']
 
     if data['status'] == "success":
-        # Find the corresponding availability entry and update
         result = times.update_one(
             {
                 'dentist_email': dentist_email,
