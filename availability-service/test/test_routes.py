@@ -19,7 +19,7 @@ class TestRoutes(TestCase):
         }
 
         response = self.client.post('/availability/', json=data)
-        self.assertStatus(response, 200)
+        self.assertStatus(response, 201)
         self.assertIn('availability', json.loads(response.data))
 
     def test_get_availability_route(self):
