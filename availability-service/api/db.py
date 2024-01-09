@@ -1,10 +1,13 @@
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from .config import get_config
 
 load_dotenv()
+config = get_config()
 
-mongodb_uri = os.getenv('MONGODB_URI')
+
+mongodb_uri = config.DATABASE_URI
 
 
 try:
